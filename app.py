@@ -282,6 +282,65 @@ def main():
             unsafe_allow_html=True,
         )
 
+        # Retrieval settings
+        if "retrieval_settings" in status:
+            st.subheader("🔍 Retrieval Settings")
+            st.markdown(
+                f"""
+                <div class="tooltip">
+                    🔍 Search Candidates: {status['retrieval_settings']['default_k']}
+                    <span class="tooltiptext">
+                        Number of document chunks initially retrieved from the vector database. Higher values provide more candidates for reranking but may include less relevant content.
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"""
+                <div class="tooltip">
+                    📊 Final Chunks: {status['retrieval_settings']['max_chunks']}
+                    <span class="tooltiptext">
+                        Number of document chunks returned after filtering and reranking. These are the most relevant chunks used to generate the answer.
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"""
+                <div class="tooltip">
+                    🎯 Min Similarity: {status['retrieval_settings']['min_similarity_threshold']}
+                    <span class="tooltiptext">
+                        Minimum similarity threshold for filtering chunks. Only chunks with similarity scores above this threshold are considered relevant.
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"""
+                <div class="tooltip">
+                    🔄 Query Expansion: {'✅ Enabled' if status['retrieval_settings']['use_query_expansion'] else '❌ Disabled'}
+                    <span class="tooltiptext">
+                        Whether to expand the user's query with related terms to improve retrieval. This helps find relevant chunks even when the exact terms don't match.
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"""
+                <div class="tooltip">
+                    📈 Reranking: {'✅ Enabled' if status['retrieval_settings']['use_reranking'] else '❌ Disabled'}
+                    <span class="tooltiptext">
+                        Whether to rerank retrieved chunks based on content relevance. This combines semantic similarity with term overlap and positioning for better relevance.
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
         # Vector store health
         if st.session_state.data_cleared:
             vector_health = "🟡 Reinitialized"
@@ -397,6 +456,37 @@ def main():
                         )
                         st.markdown("</div>", unsafe_allow_html=True)
 
+                    # Show query variations
+                    if result.get("query_variations"):
+                        st.markdown("**🔍 Query Variations:**")
+                        with st.expander(
+                            "Click to see how RAG Fusion expanded your question for better retrieval"
+                        ):
+                            for i, variation in enumerate(
+                                result["query_variations"], 1
+                            ):
+                                variation_style = (
+                                    "background-color: #e3f2fd; border-left: 4px solid #2196f3;"
+                                    if i == 1
+                                    else "background-color: #f3e5f5; border-left: 4px solid #9c27b0;"
+                                )
+                                st.markdown(
+                                    f"""
+                                    <div style="{variation_style} padding: 0.75rem; border-radius: 0.25rem; margin: 0.25rem 0; font-family: 'Courier New', monospace; color: #333333;">
+                                        <strong>Variation {i}:</strong> {variation}
+                                    </div>
+                                    """,
+                                    unsafe_allow_html=True,
+                                )
+                            st.markdown(
+                                f"""
+                                <div style="background-color: #fff3; padding: 0.75rem; border-radius: 0.25em; margin: 0.5rem 0; font-size: 0.9em; color: #e65100;">
+                                    <strong>💡 How it works:</strong> RAG Fusion uses an LLM to generate multiple ways to ask your question, then searches with all variations and combines the results for better retrieval. This helps find relevant content even when the exact terms don't match.
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+
                     # Show source chunks
                     if result.get("source_chunks"):
                         st.markdown("**📄 Source Chunks:**")
@@ -451,6 +541,35 @@ def main():
                     f"**Sources:** {', '.join([os.path.basename(source) for source in entry['sources']])}"
                 )
                 st.markdown("</div>", unsafe_allow_html=True)
+
+            # Show query variations in conversation history
+            if entry.get("query_variations"):
+                st.markdown("**🔍 Query Variations:**")
+                with st.expander(
+                    "Click to see how RAG Fusion expanded this question for better retrieval"
+                ):
+                    for i, variation in enumerate(entry["query_variations"], 1):
+                        variation_style = (
+                            "background-color: #e3f2fd; border-left: 4px solid #2196f3;"
+                            if i == 1
+                            else "background-color: #f3e5f5; border-left: 4px solid #9c27b0;"
+                        )
+                        st.markdown(
+                            f"""
+                            <div style="{variation_style} padding: 0.75rem; border-radius: 0.25rem; margin: 0.25rem 0; font-family: 'Courier New', monospace; color: #333333;">
+                                <strong>Variation {i}:</strong> {variation}
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #fff3; padding: 0.75rem; border-radius: 0.25em; margin: 0.5rem 0; font-size: 0.9em; color: #e65100;">
+                            <strong>💡 How it works:</strong> RAG Fusion uses an LLM to generate multiple ways to ask your question, then searches with all variations and combines the results for better retrieval. This helps find relevant content even when the exact terms don't match.
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
 
             # Show source chunks in conversation history
             if entry.get("source_chunks"):

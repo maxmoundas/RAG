@@ -7,7 +7,7 @@ class Config:
 
     # OpenAI Settings
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    LLM_MODEL = os.getenv("LLM_MODEL", "gpt-3.5-turbo")
+    LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini-2024-07-18")
     LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
 
     # Vector Store Settings
@@ -15,11 +15,21 @@ class Config:
     EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
     # Document Processing Settings
-    CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))
-    CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))
+    CHUNK_SIZE = int(
+        os.getenv("CHUNK_SIZE", "1500")
+    )
+    CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200")) 
 
     # Retrieval Settings
-    DEFAULT_K = int(os.getenv("DEFAULT_K", "4"))
+    DEFAULT_K = int(os.getenv("DEFAULT_K", "8"))
+    MIN_SIMILARITY_THRESHOLD = float(
+        os.getenv("MIN_SIMILARITY_THRESHOLD", "0.3")
+    )  # Minimum similarity score
+    MAX_CHUNKS_TO_RETURN = int(
+        os.getenv("MAX_CHUNKS_TO_RETURN", "4")
+    )  # Final chunks to return
+    USE_QUERY_EXPANSION = os.getenv("USE_QUERY_EXPANSION", "true").lower() == "true"
+    USE_RERANKING = os.getenv("USE_RERANKING", "true").lower() == "true"
 
     # Supported File Types
     SUPPORTED_FILE_TYPES = [".pdf", ".docx", ".txt", ".md"]

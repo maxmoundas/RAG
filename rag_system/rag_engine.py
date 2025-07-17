@@ -2,16 +2,25 @@ from typing import List, Dict, Any, Optional
 from .document_processor import DocumentProcessor
 from .vector_store import VectorStore
 from .llm_interface import LLMInterface
+from .rag_fusion import RAGFusion
 import streamlit as st
+from config import Config
 
 
 class RAGEngine:
     """Main RAG engine that orchestrates all components."""
 
-    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200):
+    def __init__(self, chunk_size: int = None, chunk_overlap: int = None):
+        # Use config values if not specified
+        if chunk_size is None:
+            chunk_size = Config.CHUNK_SIZE
+        if chunk_overlap is None:
+            chunk_overlap = Config.CHUNK_OVERLAP
+
         self.document_processor = DocumentProcessor(chunk_size, chunk_overlap)
         self.vector_store = VectorStore()
         self.llm_interface = LLMInterface()
+        self.rag_fusion = RAGFusion(self.llm_interface, self.vector_store)
         self.conversation_history = []
 
     def process_documents(
@@ -62,7 +71,7 @@ class RAGEngine:
                 "message": f"Error processing documents: {str(e)}",
             }
 
-    def ask_question(self, question: str, k: int = 4) -> Dict[str, Any]:
+    def ask_question(self, question: str, k: int = None) -> Dict[str, Any]:
         """Ask a question and get an answer using the RAG system."""
         if not question.strip():
             return {
@@ -71,6 +80,7 @@ class RAGEngine:
                 "sources": [],
                 "source_chunks": [],
                 "follow_up_questions": [],
+                "query_variations": [],
             }
 
         try:
@@ -82,11 +92,17 @@ class RAGEngine:
                     "sources": [],
                     "source_chunks": [],
                     "follow_up_questions": [],
+                    "query_variations": [],
                 }
 
-            # Search for relevant documents with scores
-            relevant_docs_with_scores = self.vector_store.similarity_search_with_score(question, k=k)
-            
+            # Get query variations from RAG Fusion
+            query_variations = self.rag_fusion.generate_query_variations(question)
+
+            # Use RAG Fusion for retrieval
+            relevant_docs_with_scores = self.rag_fusion.search_with_fusion(
+                question, k=k
+            )
+
             # Extract just the documents for LLM processing
             relevant_docs = [doc for doc, score in relevant_docs_with_scores]
 
@@ -96,10 +112,7 @@ class RAGEngine:
             # Prepare source chunks information with scores
             source_chunks = []
             for i, (doc, score) in enumerate(relevant_docs_with_scores):
-                # Convert similarity score to a more readable format
-                # ChromaDB returns cosine similarity scores (higher is better)
-                similarity_percentage = round((1 - score) * 100, 2)  # Convert to percentage
-                
+                similarity_percentage = round((1 - score) * 100, 2)
                 chunk_info = {
                     "chunk_id": i + 1,
                     "content": doc.page_content,
@@ -131,6 +144,7 @@ class RAGEngine:
                 "answer": result["answer"],
                 "sources": result["sources"],
                 "source_chunks": source_chunks,
+                "query_variations": query_variations,
                 "timestamp": st.session_state.get("current_time", "Unknown"),
             }
             self.conversation_history.append(conversation_entry)
@@ -141,6 +155,7 @@ class RAGEngine:
                 "sources": result["sources"],
                 "source_chunks": source_chunks,
                 "follow_up_questions": follow_up_questions,
+                "query_variations": query_variations,
                 "relevant_docs": relevant_docs,
             }
 
@@ -151,6 +166,7 @@ class RAGEngine:
                 "sources": [],
                 "source_chunks": [],
                 "follow_up_questions": [],
+                "query_variations": [],
             }
 
     def get_system_status(self) -> Dict[str, Any]:
@@ -175,6 +191,13 @@ class RAGEngine:
                 "chunk_overlap": self.document_processor.chunk_overlap,
             },
             "conversation_history": {"total_questions": len(self.conversation_history)},
+            "retrieval_settings": {
+                "default_k": Config.DEFAULT_K,
+                "max_chunks": Config.MAX_CHUNKS_TO_RETURN,
+                "min_similarity_threshold": Config.MIN_SIMILARITY_THRESHOLD,
+                "use_query_expansion": Config.USE_QUERY_EXPANSION,
+                "use_reranking": Config.USE_RERANKING,
+            },
         }
 
     def clear_data(self) -> Dict[str, Any]:
