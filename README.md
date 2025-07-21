@@ -2,6 +2,8 @@
 
 A comprehensive Retrieval-Augmented Generation (RAG) system with a modern Streamlit frontend for document processing, vector search, and AI-powered question answering.
 
+![RAG System Screenshot](appscreenshot.png)
+
 ## Features
 
 ### Core RAG Functionality
